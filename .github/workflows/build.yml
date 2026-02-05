@@ -86,7 +86,7 @@ jobs:
           git config http.lowSpeedLimit 0
           git config http.lowSpeedTime 999999
 
-          git checkout -b dist
+          git checkout -b app-binaries
           git add .
           git commit -m "Auto-update binaries [skip ci]"
 
