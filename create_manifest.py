@@ -31,9 +31,6 @@ def create_manifest():
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=4)
 
-    print(f"Manifest created: {output_path}")
-
-
 
 if __name__ == "__main__":
     create_manifest()
