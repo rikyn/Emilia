@@ -51,6 +51,33 @@ jobs:
               exit 1
           }
 
+      - name: Create manifest
+        shell: pwsh
+        run: |
+          python create_manifest.py
+
+      - name: Publish dist branch
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin
+
+          if (git show-ref --quiet refs/remotes/origin/dist) {
+            git checkout dist
+          } else {
+            git checkout --orphan dist
+          }
+
+          git rm -rf . || $true
+
+          Copy-Item dist\* . -Recurse -Force
+
+          git add .
+          git commit -m "Update dist for ${{ github.ref_name }}" || echo "Nothing to commit"
+          git push origin dist --force
+
       - name: Build Setup file
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
         with:
