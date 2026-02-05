@@ -28,15 +28,26 @@ jobs:
           pip install pyinstaller
           if (Test-Path requirements.txt) { pip install -r requirements.txt }
 
+      - name: Download UPX
+        shell: pwsh
+        run: |
+          $output = "upx.zip"
+          
+          Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v5.1.0/upx-5.1.0-win64.zip" -OutFile $output
+          
+          Expand-Archive -Path $output -DestinationPath upx_temp
+          
+          Move-Item -Path upx_temp/upx-5.1.0-win64/upx.exe -Destination .
+
       - name: Build with PyInstaller
         shell: pwsh
         run: |
           $LK_PATH = python -c "import livekit; print(list(livekit.__path__)[0])"
-          echo "LiveKit path: $LK_PATH"
 
           pyinstaller --noconfirm --onedir --windowed `
             --icon "src\icon.ico" `
             --uac-admin `
+            --upx-dir=. `
             --add-data "$LK_PATH\rtc\resources\livekit_ffi.dll;livekit/rtc/resources" `
             --hidden-import "urllib3.contrib.resolver.system" `
             --hidden-import "urllib3.contrib.hface.protocols.http1" `
@@ -44,39 +55,39 @@ jobs:
             --hidden-import "livekit.rtc.resources" `
             "src\main.py"
 
+          copy "src\icon.ico" "dist\main\icon.ico"
+          copy "src\data\VTube_Emotes.json" "dist\main\data\VTube_Emotes.json"
+          xcopy /E /I /H /Y "src\lang" "dist\main\lang"
+
           if (Test-Path "dist\main\main.exe") {
               Rename-Item -Path "dist\main\main.exe" -NewName "emilia.exe"
           } else {
-              Write-Error "Ошибка: файл main.exe не найден!"
               exit 1
           }
+
+      - name: Cleanup Junk Files
+        run: |
+          python clean_dist.py
 
       - name: Create manifest
         shell: pwsh
         run: |
           python create_manifest.py
 
-      - name: Publish dist branch
-        shell: pwsh
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git fetch origin
-
-          if (git show-ref --quiet refs/remotes/origin/dist) {
-            git checkout dist
-          } else {
-            git checkout --orphan dist
-          }
-
-          git rm -rf . || $true
-
-          Copy-Item dist\* . -Recurse -Force
-
-          git add .
-          git commit -m "Update dist for ${{ github.ref_name }}" || echo "Nothing to commit"
-          git push origin dist --force
+      - name: Deploy to Branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: dist
+          folder: dist/main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          clean: true
+          single-commit: true
+          force: true
+        env:
+          GIT_HTTP_POST_BUFFER: 1048576000
+          GIT_HTTP_MAX_REQUEST_BUFFER: 1048576000
+          GIT_HTTP_LOW_SPEED_LIMIT: 0
+          GIT_HTTP_LOW_SPEED_TIME: 6000
 
       - name: Build Setup file
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
