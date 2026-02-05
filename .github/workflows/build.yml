@@ -56,7 +56,6 @@ jobs:
             "src\main.py"
 
           copy "src\icon.ico" "dist\main\icon.ico"
-          copy "src\data\VTube_Emotes.json" "dist\main\data\VTube_Emotes.json"
           xcopy /E /I /H /Y "src\lang" "dist\main\lang"
 
           if (Test-Path "dist\main\main.exe") {
