@@ -76,6 +76,8 @@ jobs:
       - name: Manual Deploy (Force Push)
         shell: pwsh
         run: |
+          cd dist/main
+          
           git init
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
@@ -84,7 +86,7 @@ jobs:
           git config http.lowSpeedLimit 0
           git config http.lowSpeedTime 999999
 
-          git checkout -b app-binaries
+          git checkout -b dist
           git add .
           git commit -m "Auto-update binaries [skip ci]"
 
