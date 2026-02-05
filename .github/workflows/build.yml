@@ -73,20 +73,26 @@ jobs:
         run: |
           python create_manifest.py
 
-      - name: Deploy to Branch
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: dist
-          folder: dist/main
-          token: ${{ secrets.GITHUB_TOKEN }}
-          clean: true
-          single-commit: true
-          force: true
-        env:
-          GIT_HTTP_POST_BUFFER: 1048576000
-          GIT_HTTP_MAX_REQUEST_BUFFER: 1048576000
-          GIT_HTTP_LOW_SPEED_LIMIT: 0
-          GIT_HTTP_LOW_SPEED_TIME: 6000
+      - name: Manual Deploy (Force Push)
+        shell: pwsh
+        run: |
+          git init
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          git config http.postBuffer 1048576000
+          git config http.lowSpeedLimit 0
+          git config http.lowSpeedTime 999999
+
+          git checkout -b app-binaries
+          git add .
+          git commit -m "Auto-update binaries [skip ci]"
+
+          $remote = "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git remote add origin $remote
+          
+          Write-Host "Начинаю загрузку файлов..."
+          git push origin app-binaries --force
 
       - name: Build Setup file
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
