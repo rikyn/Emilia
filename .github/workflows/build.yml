@@ -47,7 +47,7 @@ jobs:
           pyinstaller --noconfirm --onedir --windowed `
             --icon "src\icon.ico" `
             --uac-admin `
-            --upx-dir=. `
+
             --add-data "$LK_PATH\rtc\resources\livekit_ffi.dll;livekit/rtc/resources" `
             --hidden-import "urllib3.contrib.resolver.system" `
             --hidden-import "urllib3.contrib.hface.protocols.http1" `
