@@ -17,6 +17,25 @@ jobs:
       - name: Download repo
         uses: actions/checkout@v6.0.2
 
+      - name: Deploy via SCP (Appleboy)
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Сначала чистим папку (rm), потом заливаем
+          # ssh_before запускается ДО копирования файлов
+          command_timeout: 30m
+          script: |
+            mkdir -p /var/www/emilia
+            rm -rf /var/www/emilia/*
+          
+          # Откуда берем файлы
+          source: "./requirements.txt"
+          # Куда кладем (strip_components уберет лишние папки dist/main из пути)
+          target: "/var/www/emilia"
+          strip_components: 2
+
       - name: Deploy via SCP
         shell: pwsh
         env:
