@@ -72,29 +72,37 @@ jobs:
         run: |
           python create_manifest.py
 
-      - name: Manual Deploy (Force Push)
+      - name: Deploy via SCP
         shell: pwsh
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          cd dist/main
+          # 1. Создаем файл ключа
+          $keyFile = "id_rsa_deploy"
+          Set-Content -Path $keyFile -Value $env:KEY -NoNewline
           
-          git init
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          # Ограничиваем права (для Windows ssh это не критично, но полезно)
+          # На Windows это сложнее, поэтому ssh.exe часто ругается на "too open".
+          # Но в GitHub Actions обычно работает сразу.
 
-          git config http.postBuffer 1048576000
-          git config http.lowSpeedLimit 0
-          git config http.lowSpeedTime 999999
+          # 2. Добавляем хост в known_hosts (чтобы не спрашивал yes/no)
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $env:HOST >> ~/.ssh/known_hosts
 
-          git checkout -b app-binaries
-          git add .
-          git commit -m "Auto-update binaries [skip ci]"
-
-          $remote = "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          git remote add origin $remote
+          # 3. Заливаем файлы
+          # -r : рекурсивно (всю папку)
+          # -o StrictHostKeyChecking=no : отключить проверку хоста (на всякий случай)
+          # dist/main/* : всё содержимое папки main
+          # $env:USER@$env:HOST:/var/www/emilia/ : куда класть
           
-          Write-Host "Начинаю загрузку файлов..."
-          git push origin app-binaries --force
-
+          Write-Host "Начинаю загрузку на VPS..."
+          scp -r -i $keyFile -o StrictHostKeyChecking=no dist/main/* $env:USER@$env:HOST:/var/www/emilia/
+          
+          # 4. Удаляем ключ
+          Remove-Item $keyFile
+          
       - name: Build Setup file
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
         with:
