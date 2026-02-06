@@ -98,7 +98,7 @@ jobs:
           # $env:USER@$env:HOST:/home/user1/emilia/ : куда класть
           
           Write-Host "Начинаю загрузку на VPS..."
-          scp -r -i $keyFile -o StrictHostKeyChecking=no dist/main/* $env:USER@$env:HOST:/var/www/emilia/
+          scp -r -i $keyFile -o StrictHostKeyChecking=no dist/main/* $env:USER@$env:HOST:/home/user1/emilia/
           
           # 4. Удаляем ключ
           Remove-Item $keyFile
