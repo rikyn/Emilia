@@ -27,7 +27,7 @@ def create_manifest():
 
             manifest["files"][rel_path] = get_hash(full_path)
 
-    output_path = os.path.join(f"{DIST_FOLDER}/..", MANIFEST_FILE)
+    output_path = os.path.join(f"{DIST_FOLDER}", MANIFEST_FILE)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=4)
 
