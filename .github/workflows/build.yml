@@ -28,16 +28,7 @@ jobs:
           pip install pyinstaller
           if (Test-Path requirements.txt) { pip install -r requirements.txt }
 
-      - name: Download UPX
-        shell: pwsh
-        run: |
-          $output = "upx.zip"
-          
-          Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v5.1.0/upx-5.1.0-win64.zip" -OutFile $output
-          
-          Expand-Archive -Path $output -DestinationPath upx_temp
-          
-          Move-Item -Path upx_temp/upx-5.1.0-win64/upx.exe -Destination .
+
 
       - name: Build with PyInstaller
         shell: pwsh
@@ -72,35 +63,12 @@ jobs:
         run: |
           python create_manifest.py
 
-      - name: Deploy via SCP
-        shell: pwsh
-        env:
-          HOST: ${{ secrets.VPS_HOST }}
-          USER: ${{ secrets.VPS_USER }}
-          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          # 1. Создаем файл ключа
-          $keyFile = "id_rsa_deploy"
-          Set-Content -Path $keyFile -Value $env:KEY -NoNewline
-          
-          # Ограничиваем права (для Windows ssh это не критично, но полезно)
-          # На Windows это сложнее, поэтому ssh.exe часто ругается на "too open".
-          # Но в GitHub Actions обычно работает сразу.
-
-          # 2. Добавляем хост в known_hosts (чтобы не спрашивал yes/no)
-          mkdir -p ~/.ssh
-          ssh-keyscan -H $env:HOST >> ~/.ssh/known_hosts
-
-          # 3. Заливаем файлы
-          # -r : рекурсивно (всю папку)
-          # -o StrictHostKeyChecking=no : отключить проверку хоста (на всякий случай)
-          ssh -i $keyFile -o StrictHostKeyChecking=no $env:USER@$env:HOST "mkdir -p /home/$env:USER/emilia && rm -rf /home/$env:USER/emilia/*"
-          
-          Write-Host "Начинаю загрузку на VPS..."
-          scp -r -i $keyFile -o StrictHostKeyChecking=no dist/main/* $env:USER@$env:HOST:/home/$env:USER/emilia
-          
-          # 4. Удаляем ключ
-          Remove-Item $keyFile
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-build
+          path: dist/main/
+          retention-days: 1
           
       - name: Build Setup file
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
@@ -119,3 +87,35 @@ jobs:
         with:
           files: EmiliaSetup.exe
           generate_release_notes: true
+
+  deploy:
+    needs: build             # Ждем, пока закончится сборка
+    runs-on: ubuntu-latest   # Запускаем на Linux (тут SSH работает идеально)
+    
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-build
+          path: deploy_files
+
+      - name: Execute Remote Commands
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p /var/www/emilia
+            rm -rf /var/www/emilia/*
+
+      # 3. Копируем файлы на сервер
+      - name: Copy Files via SCP
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy_files/*"
+          target: "/var/www/emilia"
+          strip_components: 1 # Убирает папку 'deploy_files' из пути, копирует только содержимое
