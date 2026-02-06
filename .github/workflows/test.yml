@@ -11,57 +11,27 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Download repo
         uses: actions/checkout@v6.0.2
 
-      - name: Deploy via SCP (Appleboy)
-        uses: appleboy/scp-action@v1
+      - name: Execute Remote Commands
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Сначала чистим папку (rm), потом заливаем
-          # ssh_before запускается ДО копирования файлов
-          command_timeout: 30m
           script: |
             mkdir -p /var/www/emilia
             rm -rf /var/www/emilia/*
-          
-          # Откуда берем файлы
+
+      - name: Copy Files via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "./requirements.txt"
-          # Куда кладем (strip_components уберет лишние папки dist/main из пути)
           target: "/var/www/emilia"
-          strip_components: 2
-
-      - name: Deploy via SCP
-        shell: pwsh
-        env:
-          HOST: ${{ secrets.VPS_HOST }}
-          USER: ${{ secrets.VPS_USER }}
-          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          # 1. Создаем файл ключа
-          $keyFile = "id_rsa_deploy"
-          Set-Content -Path $keyFile -Value $env:KEY -NoNewline
-          
-          # Ограничиваем права (для Windows ssh это не критично, но полезно)
-          # На Windows это сложнее, поэтому ssh.exe часто ругается на "too open".
-          # Но в GitHub Actions обычно работает сразу.
-
-          # 2. Добавляем хост в known_hosts (чтобы не спрашивал yes/no)
-          mkdir -p ~/.ssh
-          ssh-keyscan -H $env:HOST >> ~/.ssh/known_hosts
-
-          # 3. Заливаем файлы
-          # -r : рекурсивно (всю папку)
-          # -o StrictHostKeyChecking=no : отключить проверку хоста (на всякий случай)
-          ssh -i $keyFile -o StrictHostKeyChecking=no $env:USER@$env:HOST "mkdir -p /home/$env:USER/emilia && rm -rf /home/$env:USER/emilia/*"
-          
-          Write-Host "Начинаю загрузку на VPS..."
-          scp -i $keyFile -o StrictHostKeyChecking=no ./requirements.txt $env:USER@$env:HOST:/home/$env:USER/emilia
-          
-          # 4. Удаляем ключ
-          Remove-Item $keyFile
