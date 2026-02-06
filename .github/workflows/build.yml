@@ -95,7 +95,7 @@ jobs:
           # -r : рекурсивно (всю папку)
           # -o StrictHostKeyChecking=no : отключить проверку хоста (на всякий случай)
           # dist/main/* : всё содержимое папки main
-          # $env:USER@$env:HOST:/home/rikyn/emilia : куда класть
+          # $env:USER@$env:HOST:/home/user1/emilia/ : куда класть
           
           Write-Host "Начинаю загрузку на VPS..."
           scp -r -i $keyFile -o StrictHostKeyChecking=no dist/main/* $env:USER@$env:HOST:/var/www/emilia/
