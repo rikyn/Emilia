@@ -94,10 +94,10 @@ jobs:
           # 3. Заливаем файлы
           # -r : рекурсивно (всю папку)
           # -o StrictHostKeyChecking=no : отключить проверку хоста (на всякий случай)
-          ssh -i $keyFile -o StrictHostKeyChecking=no $env:USER@$env:HOST "mkdir -p /home/user1/emilia && rm -rf /home/user1/emilia/*"
+          ssh -i $keyFile -o StrictHostKeyChecking=no $env:USER@$env:HOST "mkdir -p /home/$env:USER/emilia && rm -rf /home/$env:USER/emilia/*"
           
           Write-Host "Начинаю загрузку на VPS..."
-          scp -r -i $keyFile -o StrictHostKeyChecking=no dist/main/* $env:USER@$env:HOST:/home/user1/emilia
+          scp -r -i $keyFile -o StrictHostKeyChecking=no dist/main/* $env:USER@$env:HOST:/home/$env:USER/emilia
           
           # 4. Удаляем ключ
           Remove-Item $keyFile
